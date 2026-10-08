@@ -26,7 +26,9 @@ const authenticate = async (req, res, next) => {
     const decoded = verifyAccessToken(token);
 
     // Find user
-    const user = await User.findById(decoded.userId);
+    const user = await User.findById(decoded.userId).select(
+      "-password -otpHash -refreshToken",
+    );
 
     if (!user) {
       throw new Error("User not found");

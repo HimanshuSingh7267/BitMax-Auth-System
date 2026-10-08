@@ -67,5 +67,15 @@ router.post("/refresh-token", refreshTokenController);
 
 router.post("/logout", authenticate, logoutController);
 
+router.get("/me", authenticate, (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Protected API accessed successfully",
+    data: {
+      user: req.user,
+    },
+  });
+});
+
 router.get("/login-history", authenticate, getLoginHistoryController);
 module.exports = router;

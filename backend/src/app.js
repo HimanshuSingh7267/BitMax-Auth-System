@@ -6,52 +6,43 @@ const rateLimit = require("express-rate-limit");
 const authRoutes = require("./modules/auth/auth.routes");
 const errorHandler = require("./middleware/error.middleware");
 const { authenticate } = require("./middleware/auth.middleware");
-// const mongoSanitize = require("express-mongo-sanitize");
-// const xss = require("xss-clean");
 
 const app = express();
 
-// Security
+// Security headers
 app.use(helmet());
 
+// Cross-Origin Resource Sharing
 app.use(
   cors({
     origin: "*",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
 
-// Body parser
+// Body parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// app.use(mongoSanitize());
-// app.use(xss());
-
-// Rate limiter
+// Rate limiter - allows 100 requests per 15 minutes to prevent brute-force while allowing smooth UX
 const authLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 5,
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
   message: {
     success: false,
     message: "Too many requests. Please try again later.",
   },
 });
 
+// Mount authentication routes
 app.use("/api/auth", authLimiter, authRoutes);
 
-// Health check
-app.get("/api/health", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "Server is running.",
-  });
-});
-
-// Error handler
-app.use(errorHandler);
-
+// Protected user profile endpoint
 app.get("/api/auth/me", authenticate, (req, res) => {
-  res.json({
+  res.status(200).json({
     success: true,
     message: "Protected API accessed successfully",
     data: {
@@ -59,5 +50,24 @@ app.get("/api/auth/me", authenticate, (req, res) => {
     },
   });
 });
+
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Server is running.",
+  });
+});
+
+// 404 Not Found route handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Cannot ${req.method} ${req.originalUrl}`,
+  });
+});
+
+// Centralized Error Handler (MUST BE LAST)
+app.use(errorHandler);
 
 module.exports = app;

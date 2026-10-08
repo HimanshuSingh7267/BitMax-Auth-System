@@ -13,7 +13,7 @@ const {
 } = require("./auth.service");
 
 const { successResponse } = require("../../utils/response");
-const { getLoginHistory } = require("./loginHistory.service");
+const { getLoginHistory, createLoginHistory } = require("./loginHistory.service");
 /* ==========================================
    REGISTER
 ========================================== */
@@ -69,6 +69,13 @@ const loginPassword = async (req, res, next) => {
   try {
     const result = await loginWithPassword(req.body);
 
+    await createLoginHistory({
+      userId: result.user.id,
+      loginMethod: "password",
+      status: "success",
+      req,
+    });
+
     return successResponse(res, 200, "Login successful.", result);
   } catch (error) {
     next(error);
@@ -102,6 +109,13 @@ const loginOTP = async (req, res, next) => {
 const verifyLoginOTP = async (req, res, next) => {
   try {
     const result = await verifyLoginOTPService(req.body);
+
+    await createLoginHistory({
+      userId: result.user.id,
+      loginMethod: "otp",
+      status: "success",
+      req,
+    });
 
     return successResponse(res, 200, result.message, result);
   } catch (error) {

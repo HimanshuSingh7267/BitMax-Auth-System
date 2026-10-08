@@ -131,18 +131,36 @@ const loginWithPassword = async ({ email, password }) => {
   password = String(password || "");
 
   if (!validator.isEmail(email) || !password) {
-    throw new Error("Valid email and password are required");
+    const error = new Error("Valid email and password are required");
+    error.statusCode = 400;
+    throw error;
   }
 
   const user = await User.findOne({ email });
-  if (!user) throw new Error("Invalid email or password");
-  if (!user.isVerified) throw new Error("Please verify your account first");
-
-  if (user.lockUntil && user.lockUntil > new Date()) {
-    throw new Error("Account is temporarily locked");
+  if (!user) {
+    const error = new Error("Invalid email or password");
+    error.statusCode = 401;
+    throw error;
   }
 
-  if (!user.password) throw new Error("Please set your password first");
+  if (!user.isVerified) {
+    const error = new Error("Please verify your account first");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  if (user.lockUntil && user.lockUntil > new Date()) {
+    const minutesLeft = Math.ceil((new Date(user.lockUntil) - Date.now()) / (60 * 1000));
+    const error = new Error(`Account is temporarily locked. Please try again in ${minutesLeft} minute(s)`);
+    error.statusCode = 423;
+    throw error;
+  }
+
+  if (!user.password) {
+    const error = new Error("Please set your password first");
+    error.statusCode = 400;
+    throw error;
+  }
 
   const valid = await comparePassword(password, user.password);
 
@@ -155,7 +173,9 @@ const loginWithPassword = async ({ email, password }) => {
     }
 
     await user.save();
-    throw new Error("Invalid email or password");
+    const error = new Error("Invalid email or password");
+    error.statusCode = 401;
+    throw error;
   }
 
   user.failedLoginAttempts = 0;
